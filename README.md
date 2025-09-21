@@ -1,4 +1,4 @@
-🌊 AquaLogix: Conversational Ocean Data Analyst
+# 🌊 AquaLogix: Conversational Ocean Data Analyst
 AquaLogix is an AI-powered platform designed for the Smart India Hackathon (SIH) that revolutionizes how we interact with complex oceanographic data. It provides a conversational interface to query, analyze, and visualize vast datasets from ARGO floats, making ocean data accessible to researchers, policymakers, and students without requiring any technical expertise.
 
 ## Key Features
