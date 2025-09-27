@@ -2,12 +2,12 @@ import os
 import re
 from dotenv import load_dotenv
 
-# Import all LangChain and AI components
+from sqlalchemy import create_engine
+from langchain_community.utilities import SQLDatabase
+from langchain.chains import create_sql_query_chain
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import ChatOllama
 from langchain_community.vectorstores import FAISS
-from langchain.chains import create_sql_query_chain
-from langchain_community.utilities import SQLDatabase
 
 def extract_sql_from_string(text: str) -> str:
     """
@@ -30,30 +30,24 @@ def extract_sql_from_string(text: str) -> str:
         
     return sql_query
 
-def process_natural_language_query(question: str) -> str:
-    """
-    The main function that processes a natural language query from start to finish.
-    """
-    print("--- Initializing components for query processing ---")
+def initialize_components():
+    """Load all necessary components for the Text-to-SQL chain."""
     load_dotenv()
     
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
         raise ConnectionError("DATABASE_URL not found in .env file.")
-    db = SQLDatabase.from_uri(db_url)
+        
+    # --- CORRECTED LOGIC ---
+    # 1. Create the SQLAlchemy engine first.
+    engine = create_engine(db_url)
+    
+    # 2. Pass the created engine to the SQLDatabase object.
+    db = SQLDatabase(engine=engine)
+    # --- END CORRECTION ---
     
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     llm = ChatOllama(model="llama3:8b")
     
-    print(f"Generating SQL for question: '{question}'")
-    chain = create_sql_query_chain(llm, db)
-    raw_response = chain.invoke({"question": question})
-    
-    print(f"Raw LLM response: {raw_response}")
-    sql_query = extract_sql_from_string(raw_response)
-    print(f"Cleaned SQL query: {sql_query}")
-    
-    result = db.run(sql_query)
-    print(f"Query result: {result}")
-    
-    return result
+    # Return all three components
+    return llm, db, engine
