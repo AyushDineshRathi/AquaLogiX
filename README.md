@@ -54,7 +54,7 @@ The system is built on a modern, decoupled architecture featuring a Python backe
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
+git clone "https://github.com/AyushDineshRathi/AquaLogiX.git"
 cd AquaLogix
 
 # Create a virtual environment
