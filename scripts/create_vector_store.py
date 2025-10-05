@@ -1,12 +1,11 @@
 import os
 from sqlalchemy import create_engine, inspect
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from dotenv import load_dotenv
 
 print("Starting the vector store creation process...")
 
-# --- 1. CONFIGURATION & DATABASE CONNECTION ---
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
@@ -15,41 +14,45 @@ if not DATABASE_URL:
 engine = create_engine(DATABASE_URL)
 inspector = inspect(engine)
 
-# --- 2. EXTRACT DATABASE SCHEMA INFORMATION ---
-schema_docs = []
-table_names = inspector.get_table_names()
-print(f"Found tables: {table_names}")
+# --- NEW: More descriptive schema documents ---
+schema_docs = [
+    (
+        "argo_floats",
+        "This table contains metadata about each ARGO float. It has the following columns: "
+        "'id' which is the primary key and a unique identifier for each float in the database, "
+        "'wmo_id' which is the float's official World Meteorological Organization (WMO) identifier, "
+        "'launch_date' which is the date the float was deployed, and "
+        "'project_name' which is the name of the project associated with the float."
+    ),
+    (
+        "measurements",
+        "This table contains the time-series sensor readings from the ARGO floats. It has the following columns: "
+        "'id' which is a unique identifier for each measurement record, "
+        "'float_id' which is a foreign key that references the 'id' column in the 'argo_floats' table, "
+        "'timestamp' which is the date and time of the measurement, "
+        "'latitude' and 'longitude' for the measurement's location, "
+        "'pressure' which indicates the depth in dbar, "
+        "'temperature' in Celsius, and "
+        "'salinity' in PSU."
+    )
+]
 
-for table_name in table_names:
-    columns = inspector.get_columns(table_name)
-    # Create a simple, descriptive string for each table
-    table_doc = f"Table named '{table_name}' has the following columns: "
-    col_docs = []
-    for column in columns:
-        col_docs.append(f"{column['name']} (type: {column['type']})")
-    
-    table_doc += ", ".join(col_docs) + "."
-    schema_docs.append(table_doc)
+# Create a list of text documents from our more descriptive schema
+documents_for_embedding = [f"Table '{name}': {desc}" for name, desc in schema_docs]
 
 print("\n--- Generated Schema Documents ---")
-for doc in schema_docs:
+for doc in documents_for_embedding:
     print(doc)
 
-# --- 3. CREATE EMBEDDINGS ---
-# We use a powerful open-source model from Hugging Face to create the embeddings
-# This runs locally on your machine.
-print("\nLoading embedding model (this may take a moment on first run)...")
+print("\nLoading embedding model...")
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-# --- 4. CREATE AND SAVE THE VECTOR STORE ---
-if schema_docs:
+if documents_for_embedding:
     print("Creating the FAISS vector store...")
-    vector_store = FAISS.from_texts(texts=schema_docs, embedding=embeddings)
+    vector_store = FAISS.from_texts(texts=documents_for_embedding, embedding=embeddings)
     
-    # Define the path to save the vector store
     vector_store_path = os.path.join(os.path.dirname(__file__), '..', 'src', 'core', 'faiss_index')
     
-    # Save the vector store locally
     vector_store.save_local(vector_store_path)
     print(f"\nVector store created and saved successfully at: {vector_store_path}")
 else:

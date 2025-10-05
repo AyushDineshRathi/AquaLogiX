@@ -1,34 +1,13 @@
 import os
-import re
+import json
 from dotenv import load_dotenv
 
 from sqlalchemy import create_engine
 from langchain_community.utilities import SQLDatabase
-from langchain.chains import create_sql_query_chain
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import ChatOllama
-from langchain_community.vectorstores import FAISS
-
-def extract_sql_from_string(text: str) -> str:
-    """
-    Extracts a SQL query from a string, designed to handle conversational LLM output.
-    """
-    if "sqlquery:" in text.lower():
-        parts = re.split(r"sqlquery:", text, flags=re.IGNORECASE)
-        sql_query = parts[1]
-    else:
-        select_pos = text.upper().find("SELECT")
-        if select_pos != -1:
-            sql_query = text[select_pos:]
-        else:
-            raise ValueError("Could not find a SQL query in the LLM's response.")
-            
-    sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
-    
-    if not sql_query.endswith(';'):
-        sql_query += ';'
-        
-    return sql_query
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 def initialize_components():
     """Load all necessary components for the Text-to-SQL chain."""
@@ -38,16 +17,44 @@ def initialize_components():
     if not db_url:
         raise ConnectionError("DATABASE_URL not found in .env file.")
         
-    # --- CORRECTED LOGIC ---
-    # 1. Create the SQLAlchemy engine first.
     engine = create_engine(db_url)
-    
-    # 2. Pass the created engine to the SQLDatabase object.
     db = SQLDatabase(engine=engine)
-    # --- END CORRECTION ---
     
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-    llm = ChatOllama(model="llama3:8b")
+    llm = ChatOllama(model="llama3:8b", format="json")
     
-    # Return all three components
     return llm, db, engine
+
+def create_query_generation_chain(llm, db):
+    """Creates the LangChain chain with our custom prompt for generating SQL and a viz type."""
+    
+    # --- FINAL, MOST DETAILED PROMPT ---
+    template = """
+    Based on the table schema below, write a SQL query that would answer the user's question.
+    Also, provide a suggestion for the best visualization type from this list: ['table', 'line_chart', 'map', 'metric', 'bar_chart'].
+
+    ---
+    **RULE 1:** If the user asks for a 'profile' (e.g., 'temperature profile', 'salinity profile'), 
+    you MUST select the 'pressure' column to represent depth, along with the requested measurement column 
+    (e.g., 'temperature' or 'salinity'). The visualization_type for a profile MUST be 'line_chart'.
+    
+    **RULE 2:** The 'pressure', 'temperature', and 'salinity' columns belong to the 'measurements' table. 
+    The 'wmo_id' column belongs to the 'argo_floats' table. 
+    You MUST use the correct table aliases when selecting columns (e.g., 'm.pressure', not 'p.pressure').
+    ---
+
+    Return ONLY a JSON object with two keys: "query" and "visualization_type".
+
+    Schema: {schema}
+
+    Here is the conversation history:
+    {history}
+
+    Question: {question}
+    """
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", template),
+        MessagesPlaceholder(variable_name="history"), # Placeholder for history
+        ("human", "{question}")
+    ])
+    
+    return prompt | llm
