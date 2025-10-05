@@ -1,27 +1,70 @@
-# 🌊 AquaLogix: Conversational Ocean Data Analyst
-AquaLogix is an AI-powered platform designed for the Smart India Hackathon (SIH) that revolutionizes how we interact with complex oceanographic data. It provides a conversational interface to query, analyze, and visualize vast datasets from ARGO floats, making ocean data accessible to researchers, policymakers, and students without requiring any technical expertise.
+# 🌊 AquaLogix: A Conversational Ocean Data Analyst
 
+
+[![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+
+AquaLogix is an AI-powered platform that revolutionizes how we interact with complex oceanographic data. It provides an intuitive conversational interface to query, analyze, and dynamically visualize vast datasets from ARGO floats, making ocean data accessible to everyone.
+
+---
+## Live Demo in Action
+
+AquaLogix can understand complex questions, remember the context of the conversation, and generate a variety of visualizations on the fly.
+
+**Generating a Profile Chart** 
+![Aqualogix](assets/aqualogix.png) 
+![Line Chart](assets/line_chart.png) 
+
+---
 ## Key Features
-Natural Language Queries: Ask questions in plain English (e.g., "Show me salinity profiles near the equator") and get immediate, accurate answers.
 
-Intelligent Text-to-SQL: Powered by a local LLM using a Retrieval-Augmented Generation (RAG) pipeline to translate user questions into precise SQL queries.
+* **Natural Language Queries**: Ask complex questions in plain English and get immediate, accurate answers.
+* **Intelligent Text-to-SQL**: Powered by a local LLM (Ollama) and guided by robust prompt engineering to translate questions into precise SQL queries.
+* **Dynamic Visualizations**: Automatically generates the best visualization for your data, including interactive tables, line charts, bar charts, and geospatial maps.
+* **Conversational Memory**: Remembers the context of your current chat session, allowing for natural follow-up questions.
+* **Automated Data Pipeline**: A resilient ETL script that processes raw ARGO NetCDF (`.nc`) files, standardizes data, and loads it into a structured PostgreSQL database.
 
-Automated Data Pipeline: An end-to-end ETL script that processes raw ARGO NetCDF (.nc) files and loads them into a structured PostgreSQL database.
-
-Interactive Visualizations: A user-friendly dashboard (built with Streamlit) to display data as geospatial maps, time-series plots, and tables.
-
-Extensible Architecture: Designed to be easily extended with new data sources like BGC floats, gliders, and satellite data in the future.
-
+---
 ## System Architecture
-The system is built on a modern, decoupled architecture that ensures scalability and maintainability.
 
+The system is built on a modern, decoupled architecture featuring a Python backend, a Streamlit frontend, and a local AI core. This ensures scalability and maintainability.
+
+![AquaLogix System Architecture](assets/System_Architecture.png)
+
+---
 ## Technology Stack
-Backend: Python, FastAPI
 
-Frontend: Streamlit
+* **Backend**: Python, FastAPI, Uvicorn
+* **Frontend**: Streamlit
+* **Database**: PostgreSQL (for structured data)
+* **AI/ML**: Ollama (`llama3:8b` or `gemma:2b`), LangChain, Sentence-Transformers
+* **Data Handling**: Pandas, xarray, SQLAlchemy
+* **Plotting**: Plotly
 
-Database: PostgreSQL (for structured data), FAISS (for vector store)
+---
+## Local Setup and Installation
 
-AI/ML: LangChain, Ollama (with llama3:8b), Sentence-Transformers
+### 1. Prerequisites
 
-Data Handling: xarray, pandas, SQLAlchemy
+* Python 3.9+
+* PostgreSQL Server
+* Git
+* [Ollama](https://ollama.com)
+
+### 2. Clone and Set Up
+
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd AquaLogix
+
+# Create a virtual environment
+python -m venv venv
+
+# Activate the environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt

@@ -4,10 +4,9 @@ from dotenv import load_dotenv
 
 from sqlalchemy import create_engine
 from langchain_community.utilities import SQLDatabase
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import ChatOllama
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 def initialize_components():
     """Load all necessary components for the Text-to-SQL chain."""
@@ -20,40 +19,37 @@ def initialize_components():
     engine = create_engine(db_url)
     db = SQLDatabase(engine=engine)
     
-    llm = ChatOllama(model="llama3:8b", format="json")
+    llm = ChatOllama(model="llama3:8b", format="json") # Using the 8b model as you confirmed
     
     return llm, db, engine
 
 def create_query_generation_chain(llm, db):
-    """Creates the LangChain chain with our custom prompt for generating SQL and a viz type."""
+    """Creates the LangChain chain with our final, most robust prompt."""
     
-    # --- FINAL, MOST DETAILED PROMPT ---
-    template = """
-    Based on the table schema below, write a SQL query that would answer the user's question.
-    Also, provide a suggestion for the best visualization type from this list: ['table', 'line_chart', 'map', 'metric', 'bar_chart'].
+    template = """You are an expert PostgreSQL developer. Your goal is to convert a user's question into a syntactically correct PostgreSQL query.
 
-    ---
-    **RULE 1:** If the user asks for a 'profile' (e.g., 'temperature profile', 'salinity profile'), 
-    you MUST select the 'pressure' column to represent depth, along with the requested measurement column 
-    (e.g., 'temperature' or 'salinity'). The visualization_type for a profile MUST be 'line_chart'.
-    
-    **RULE 2:** The 'pressure', 'temperature', and 'salinity' columns belong to the 'measurements' table. 
-    The 'wmo_id' column belongs to the 'argo_floats' table. 
-    You MUST use the correct table aliases when selecting columns (e.g., 'm.pressure', not 'p.pressure').
-    ---
+You must use only the tables and columns described in the schema below. Pay close attention to which columns belong to which tables to avoid errors.
 
-    Return ONLY a JSON object with two keys: "query" and "visualization_type".
+**Schema:**
+- **Table 'argo_floats' (alias 'af'):** Contains metadata about each float. Columns: `id`, `wmo_id`, `project_name`, `pi_name`, `launch_date`.
+- **Table 'measurements' (alias 'm'):** Contains sensor readings. Columns: `id`, `float_id`, `timestamp`, `latitude`, `longitude`, `pressure`, `temperature`, `salinity`.
+- **Relationship:** The `measurements.float_id` column joins to the `argo_floats.id` column.
 
-    Schema: {schema}
+**Rules for your output:**
+1. For "profile" questions (e.g., "temperature profile"), you MUST select the `pressure` and the relevant measurement (e.g., `temperature`) columns **using their exact original names**. Do NOT use aliases like 'depth' or 'value'. The visualization type for a profile MUST be 'line_chart'.
+2. You MUST return your answer as a single, valid JSON object with two keys: "query" (the SQL string) and "visualization_type" (a string from the list: ['table', 'line_chart', 'map', 'metric', 'bar_chart']).
+3. Every SQL query MUST include a `FROM` clause and a `JOIN` clause if data from both tables is needed.
 
-    Here is the conversation history:
-    {history}
+**User Question:** {question}
 
-    Question: {question}
-    """
+**Conversation History:**
+{history}
+
+**JSON Output:**
+"""
     prompt = ChatPromptTemplate.from_messages([
         ("system", template),
-        MessagesPlaceholder(variable_name="history"), # Placeholder for history
+        MessagesPlaceholder(variable_name="history"),
         ("human", "{question}")
     ])
     

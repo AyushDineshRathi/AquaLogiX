@@ -32,23 +32,26 @@ cur = conn.cursor()
 # Step 3: Create tables
 sql_statements = [
     """
-    CREATE TABLE IF NOT EXISTS argo_floats (
+    DROP TABLE IF EXISTS measurements;
+    DROP TABLE IF EXISTS argo_floats;
+
+    CREATE TABLE argo_floats (
         id SERIAL PRIMARY KEY,
         wmo_id INTEGER UNIQUE NOT NULL,
-        launch_date TIMESTAMP,
-        project_name VARCHAR(255)
+        project_name VARCHAR(255),
+        pi_name VARCHAR(255), -- Principal Investigator
+        launch_date TIMESTAMP
     );
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS measurements (
+
+    CREATE TABLE measurements (
         id SERIAL PRIMARY KEY,
         float_id INTEGER REFERENCES argo_floats(id) ON DELETE CASCADE,
         timestamp TIMESTAMP NOT NULL,
         latitude DOUBLE PRECISION,
         longitude DOUBLE PRECISION,
-        pressure DOUBLE PRECISION,
-        temperature DOUBLE PRECISION,
-        salinity DOUBLE PRECISION
+        pressure DOUBLE PRECISION, -- from pres_adjusted
+        temperature DOUBLE PRECISION, -- from temp_adjusted
+        salinity DOUBLE PRECISION -- from psal_adjusted
     );
     """
 ]

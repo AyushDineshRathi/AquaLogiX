@@ -1,0 +1,23 @@
+import xarray as xr
+import os
+
+file_name = 'nodc_D1901049_343.nc' 
+file_path = os.path.join('data', 'raw', file_name)
+
+if os.path.exists(file_path):
+    argo_dataset = xr.open_dataset(file_path)
+
+    # Print the dataset object to see its structure
+    print("--- Dataset Structure ---")
+    with open("output.txt", "w") as f:
+        f.write(argo_dataset.__str__())
+    for var in argo_dataset.data_vars:
+        print(var)
+
+    # Print the specific variables available
+    print("\n--- Data Variables ---")
+    for var in argo_dataset.data_vars:
+        print(var)
+else:
+    print(f"Error: The file was not found at {file_path}")
+    print("Please make sure you've downloaded an ARGO .nc file and placed it in the data/raw/ directory.")
